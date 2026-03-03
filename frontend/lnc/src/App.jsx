@@ -1,17 +1,17 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-// Public pages
+
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-
-// Protected user pages
 import Dashboard from './pages/Dashboard';
+import DoctorDashboard from './pages/DoctorDashboard';
 import Profile from './pages/Profile';
 import Appointments from './pages/Appointments';
 import BookAppointment from './pages/BookAppointment';
@@ -22,8 +22,8 @@ import PatientTypeDetail from './pages/PatientTypeDetail';
 import MyNutritionPlan from './pages/MyNutritionPlan';
 import EmergencyContacts from './pages/EmergencyContacts';
 import Medications from './pages/Medications';
+import Notifications from './pages/Notifications';
 
-// Admin imports
 import AdminLayout from './admin/AdminLayout';
 import AdminProtectedRoute from './admin/AdminProtectedRoute';
 import AdminDashboard from './admin/pages/AdminDashboard';
@@ -32,9 +32,27 @@ import AdminDoctors from './admin/pages/AdminDoctors';
 import AdminAppointments from './admin/pages/AdminAppointments';
 import AdminPayments from './admin/pages/AdminPayments';
 import AdminNutrition from './admin/pages/AdminNutrition';
+import AdminNotifications from './admin/pages/AdminNotifications';
 import AdminSettings from './admin/pages/AdminSettings';
 
-// Component to conditionally show Navbar/Footer (not on admin routes)
+import { getRoleHomePath } from './config/roleConfig';
+
+const NotFound = () => (
+  <div className="max-w-3xl mx-auto py-16 px-4 text-center">
+    <h1 className="text-4xl font-bold text-gray-900 mb-3">Page not found</h1>
+    <p className="text-gray-600">The page you are looking for does not exist.</p>
+  </div>
+);
+
+const RoleDashboard = () => {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+  const roleHome = getRoleHomePath(user.role);
+  if (roleHome !== '/dashboard') return <Navigate to={roleHome} replace />;
+  return <Dashboard />;
+};
+
 const Layout = ({ children }) => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -54,19 +72,25 @@ function App() {
       <BrowserRouter>
         <Layout>
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Protected user routes */}
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <RoleDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/doctor-dashboard"
+              element={
+                <ProtectedRoute requiredRole="doctor">
+                  <DoctorDashboard />
                 </ProtectedRoute>
               }
             />
@@ -81,7 +105,7 @@ function App() {
             <Route
               path="/appointments"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <Appointments />
                 </ProtectedRoute>
               }
@@ -89,7 +113,7 @@ function App() {
             <Route
               path="/appointments/new"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <BookAppointment />
                 </ProtectedRoute>
               }
@@ -97,7 +121,7 @@ function App() {
             <Route
               path="/appointments/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <AppointmentDetail />
                 </ProtectedRoute>
               }
@@ -105,7 +129,7 @@ function App() {
             <Route
               path="/symptom-checker"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <SymptomChecker />
                 </ProtectedRoute>
               }
@@ -113,7 +137,7 @@ function App() {
             <Route
               path="/nutrition"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <Nutrition />
                 </ProtectedRoute>
               }
@@ -121,7 +145,7 @@ function App() {
             <Route
               path="/nutrition/:patientTypeId"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <PatientTypeDetail />
                 </ProtectedRoute>
               }
@@ -129,7 +153,7 @@ function App() {
             <Route
               path="/my-nutrition-plan"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <MyNutritionPlan />
                 </ProtectedRoute>
               }
@@ -137,7 +161,7 @@ function App() {
             <Route
               path="/emergency-contacts"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <EmergencyContacts />
                 </ProtectedRoute>
               }
@@ -145,13 +169,20 @@ function App() {
             <Route
               path="/medications"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="user">
                   <Medications />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Admin routes */}
             <Route
               path="/admin"
               element={
@@ -166,8 +197,11 @@ function App() {
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="payments" element={<AdminPayments />} />
               <Route path="nutrition" element={<AdminNutrition />} />
+              <Route path="notifications" element={<AdminNotifications />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
       </BrowserRouter>

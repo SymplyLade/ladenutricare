@@ -1,284 +1,215 @@
-// import { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
-// import { getPatientTypes } from '../services/nutrition';
-
-// const patientTypeIcons = {
-//   diabetes: 'https://img.icons8.com/color/96/diabetes.png',
-//   pregnancy: 'https://img.icons8.com/color/96/pregnancy.png',
-//   cramps: 'https://img.icons8.com/color/96/cramps.png',
-//   hypertension: 'https://img.icons8.com/color/96/hypertension.png',
-//   obesity: 'https://img.icons8.com/color/96/obesity.png',
-//   // default fallback
-//   default: 'https://img.icons8.com/color/96/healthy-eating.png',
-// };
-
-// const Nutrition = () => {
-//   const [patientTypes, setPatientTypes] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState('');
-
-//   useEffect(() => {
-//     const fetchPatientTypes = async () => {
-//       try {
-//         const response = await getPatientTypes();
-//         setPatientTypes(response.data);
-//       } catch (err) {
-//         setError('Failed to load nutrition plans');
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchPatientTypes();
-//   }, []);
-
-//   if (loading) return <div className="text-center py-10">Loading...</div>;
-
-//   return (
-//     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-//       <h1 className="text-3xl font-bold text-gray-900 mb-2">Nutrition Plans</h1>
-//       <p className="text-gray-600 mb-8">
-//         Select your health condition to get personalized meal plans and dietary advice.
-//       </p>
-
-//       {error && (
-//         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-//           {error}
-//         </div>
-//       )}
-
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//         {patientTypes.map((type) => (
-//           <Link
-//             key={type.id}
-//             to={`/nutrition/${type.id}`}
-//             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 flex flex-col items-center text-center"
-//           >
-//             <img
-//               src={patientTypeIcons[type.name.toLowerCase()] || patientTypeIcons.default}
-//               alt={type.name}
-//               className="w-24 h-24 mb-4"
-//             />
-//             <h3 className="text-xl font-semibold text-gray-800 mb-2">{type.name}</h3>
-//             <p className="text-gray-600 line-clamp-3">{type.description}</p>
-//             <span className="mt-4 text-indigo-600 hover:text-indigo-500 font-medium">
-//               View advice & meals →
-//             </span>
-//           </Link>
-//         ))}
-//       </div>
-
-//       {patientTypes.length === 0 && (
-//         <div className="text-center py-12 bg-white rounded-lg shadow">
-//           <p className="text-gray-500">No nutrition plans available at the moment.</p>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default Nutrition;
-
-
-
-// import { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
-
-// // Mock data
-// const mockPatientTypes = [
-//   {
-//     id: 1,
-//     name: 'Diabetes',
-//     description: 'Manage blood sugar levels with proper diet.',
-//     general_advice: 'Avoid sugary foods, eat whole grains, and monitor carbs.'
-//   },
-//   {
-//     id: 2,
-//     name: 'Pregnancy',
-//     description: 'Nutrition for a healthy pregnancy.',
-//     general_advice: 'Increase folic acid, iron, and calcium. Stay hydrated.'
-//   },
-//   {
-//     id: 3,
-//     name: 'Hypertension',
-//     description: 'Control blood pressure with a balanced diet.',
-//     general_advice: 'Reduce sodium intake, eat potassium-rich foods, and limit alcohol.'
-//   },
-//   {
-//     id: 4,
-//     name: 'Cramps',
-//     description: 'Ease muscle cramps with proper nutrition.',
-//     general_advice: 'Stay hydrated, eat magnesium-rich foods like bananas and nuts.'
-//   },
-//   {
-//     id: 5,
-//     name: 'Obesity',
-//     description: 'Achieve healthy weight with portion control and balanced meals.',
-//     general_advice: 'Focus on whole foods, avoid processed snacks, and exercise regularly.'
-//   }
-// ];
-
-// const Nutrition = () => {
-//   const [patientTypes, setPatientTypes] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState('');
-
-//   useEffect(() => {
-//     // Simulate API call
-//     setTimeout(() => {
-//       setPatientTypes(mockPatientTypes);
-//       setLoading(false);
-//     }, 800);
-//   }, []);
-
-//   if (loading) return <div className="text-center py-10">Loading...</div>;
-
-//   return (
-//     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-//       <h1 className="text-3xl font-bold text-gray-900 mb-8">Nutrition & Meal Planning</h1>
-//       <p className="text-gray-600 mb-8">Select your health condition to get personalized dietary advice and meal plans.</p>
-
-//       {error && (
-//         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-//           {error}
-//         </div>
-//       )}
-
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//         {patientTypes.map((type) => (
-//           <Link
-//             key={type.id}
-//             to={`/nutrition/${type.id}`}
-//             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
-//           >
-//             <div className="p-6 flex flex-col items-center text-center">
-//               <img
-//                 src={`https://img.icons8.com/color/96/nutrition.png`}
-//                 alt={type.name}
-//                 className="w-24 h-24 mb-4"
-//               />
-//               <h3 className="text-xl font-semibold text-gray-800 mb-2">{type.name}</h3>
-//               <p className="text-gray-600 line-clamp-3">{type.description}</p>
-//               <span className="mt-4 text-indigo-600 font-medium">View details →</span>
-//             </div>
-//           </Link>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Nutrition;
-
-
-
-
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-// Import local images
+import { createCustomNutritionPlan, getPatientTypes } from '../services/nutrition';
 import diabetesImg from '../assets/diabetes.jpg';
 import pregnancyImg from '../assets/pregnancy.jpg';
 import hypertensionImg from '../assets/hypertension.jpg';
 import crampsImg from '../assets/cramps.jpg';
 import obesityImg from '../assets/obesity.jpg';
+import logoImg from '../assets/lnc-logo.svg';
 
-// Mock data
-const mockPatientTypes = [
-  {
-    id: 1,
-    name: 'Diabetes',
-    description: 'Manage blood sugar levels with proper diet.',
-    general_advice: 'Avoid sugary foods, eat whole grains, and monitor carbs.',
-    image: diabetesImg,
-  },
-  {
-    id: 2,
-    name: 'Pregnancy',
-    description: 'Nutrition for a healthy pregnancy.',
-    general_advice: 'Increase folic acid, iron, and calcium. Stay hydrated.',
-    image: pregnancyImg,
-  },
-  {
-    id: 3,
-    name: 'Hypertension',
-    description: 'Control blood pressure with a balanced diet.',
-    general_advice: 'Reduce sodium intake, eat potassium-rich foods, and limit alcohol.',
-    image: hypertensionImg,
-  },
-  {
-    id: 4,
-    name: 'Cramps',
-    description: 'Ease muscle cramps with proper nutrition.',
-    general_advice: 'Stay hydrated, eat magnesium-rich foods like bananas and nuts.',
-    image: crampsImg,
-  },
-  {
-    id: 5,
-    name: 'Obesity',
-    description: 'Achieve healthy weight with portion control and balanced meals.',
-    general_advice: 'Focus on whole foods, avoid processed snacks, and exercise regularly.',
-    image: obesityImg,
-  },
-];
+const imageByType = {
+  diabetes: diabetesImg,
+  pregnancy: pregnancyImg,
+  hypertension: hypertensionImg,
+  cramps: crampsImg,
+  obesity: obesityImg,
+};
+
+const fallbackImg = logoImg;
+
+const getTypeImage = (typeName = '') => {
+  const normalized = typeName.toLowerCase().trim();
+  if (imageByType[normalized]) return imageByType[normalized];
+  if (normalized.includes('diabet')) return diabetesImg;
+  if (normalized.includes('pregnan')) return pregnancyImg;
+  if (normalized.includes('hyperten')) return hypertensionImg;
+  if (normalized.includes('cramp')) return crampsImg;
+  if (normalized.includes('obes')) return obesityImg;
+  return fallbackImg;
+};
 
 const Nutrition = () => {
   const [patientTypes, setPatientTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [customForm, setCustomForm] = useState({
+    title: '',
+    description: '',
+    desired_meal_plan: '',
+  });
+  const [customSubmitting, setCustomSubmitting] = useState(false);
+  const [customMessage, setCustomMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setPatientTypes(mockPatientTypes);
-      setLoading(false);
-    }, 800);
+    const fetchPatientTypes = async () => {
+      try {
+        const response = await getPatientTypes();
+        setPatientTypes(response.data);
+      } catch (err) {
+        setError('Failed to load nutrition plans.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatientTypes();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
+  const handleCustomChange = (e) => {
+    setCustomForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleCustomSubmit = async (e) => {
+    e.preventDefault();
+    setCustomMessage({ type: '', text: '' });
+
+    if (customForm.desired_meal_plan.trim().length < 10) {
+      setCustomMessage({ type: 'error', text: 'Please provide more detail about your desired meal plan.' });
+      return;
+    }
+
+    setCustomSubmitting(true);
+    try {
+      await createCustomNutritionPlan({
+        title: customForm.title || 'My Custom Meal Plan',
+        description: customForm.description || 'User-defined meal plan',
+        desired_meal_plan: customForm.desired_meal_plan.trim(),
+      });
+      setCustomMessage({ type: 'success', text: 'Custom meal plan saved. You can view it in My Nutrition Plan.' });
+      setCustomForm({ title: '', description: '', desired_meal_plan: '' });
+    } catch (err) {
+      setCustomMessage({
+        type: 'error',
+        text: err.response?.data?.detail || err.response?.data?.error || 'Failed to save custom meal plan.',
+      });
+    } finally {
+      setCustomSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="text-center py-10">Loading...</div>;
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Nutrition & Meal Planning</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">Nutrition and Meal Planning</h1>
       <p className="text-gray-600 mb-8">
         Select your health condition to get personalized dietary advice and meal plans.
       </p>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Tell Us the Meal Plan You Want</h2>
+        <p className="text-gray-600 mb-4">
+          If you already know what meals you want, write it here and save it as your active nutrition plan.
+        </p>
+
+        {customMessage.text && (
+          <div
+            className={`mb-4 px-4 py-3 rounded ${
+              customMessage.type === 'success'
+                ? 'bg-green-100 border border-green-300 text-green-700'
+                : 'bg-red-100 border border-red-300 text-red-700'
+            }`}
+          >
+            {customMessage.text}
+          </div>
+        )}
+
+        <form onSubmit={handleCustomSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                Plan Title
+              </label>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                value={customForm.title}
+                onChange={handleCustomChange}
+                placeholder="e.g., My Weekly Healthy Plan"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Short Description
+              </label>
+              <input
+                id="description"
+                name="description"
+                type="text"
+                value={customForm.description}
+                onChange={handleCustomChange}
+                placeholder="e.g., Low carb with high protein"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="desired_meal_plan" className="block text-sm font-medium text-gray-700">
+              Desired Meal Plan
+            </label>
+            <textarea
+              id="desired_meal_plan"
+              name="desired_meal_plan"
+              rows={5}
+              value={customForm.desired_meal_plan}
+              onChange={handleCustomChange}
+              placeholder="Write your preferred breakfast, lunch, dinner, snacks, and any restrictions..."
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <Link
+              to="/my-nutrition-plan"
+              className="inline-flex justify-center items-center bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              View My Nutrition Plan
+            </Link>
+            <button
+              type="submit"
+              disabled={customSubmitting}
+              className="inline-flex justify-center items-center bg-indigo-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {customSubmitting ? 'Saving...' : 'Save Custom Plan'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {patientTypes.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <p className="text-gray-500">No nutrition plans available.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {patientTypes.map((type) => {
+            const image = getTypeImage(type.name || '');
+            return (
+              <Link
+                key={type.id}
+                to={`/nutrition/${type.id}`}
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group"
+              >
+                <div className="p-6 flex flex-col items-center text-center">
+                  <div className="w-24 h-24 mb-4 rounded-full overflow-hidden border-4 border-indigo-100 group-hover:border-indigo-300 transition-colors">
+                    <img src={image} alt={type.name} className="w-full h-full object-cover" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">{type.name}</h3>
+                  <p className="text-gray-600 line-clamp-3">{type.description}</p>
+                  <span className="mt-4 text-indigo-600 font-medium">View details</span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {patientTypes.map((type) => (
-          <Link
-            key={type.id}
-            to={`/nutrition/${type.id}`}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group"
-          >
-            <div className="p-6 flex flex-col items-center text-center">
-              <div className="w-24 h-24 mb-4 rounded-full overflow-hidden border-4 border-indigo-100 group-hover:border-indigo-300 transition-colors">
-                <img
-                  src={type.image}
-                  alt={type.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">{type.name}</h3>
-              <p className="text-gray-600 line-clamp-3">{type.description}</p>
-              <span className="mt-4 text-indigo-600 font-medium group-hover:translate-x-1 transition-transform inline-flex items-center">
-                View details →
-              </span>
-            </div>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 };

@@ -1,0 +1,19 @@
+<svg width="220" height="220" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">LNC Logo</title>
+  <desc id="desc">LNC monogram logo</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="200" height="200" rx="46" fill="url(#bg)"/>
+  <path d="M55 55h18v90h52v16H55z" fill="#ffffff"/>
+  <path d="M132 55h18l33 53V55h17v110h-18l-33-53v53h-17z" fill="#ffffff"/>
+  <path d="M55 176c18 17 35 24 55 24s37-7 55-24" fill="none" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="110" cy="110" r="92" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="3"/>
+</svg>

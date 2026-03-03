@@ -146,12 +146,14 @@
 #     return current_user
 
 
+from datetime import datetime, timedelta
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import timedelta
 
 from database import get_db
-from models import User
+from models import Doctor, PasswordResetToken, User
 from schemas import UserCreate, UserLogin, Token, UserResponse
 from utils.auth import (
     verify_password,
@@ -177,11 +179,24 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         password_hash=hashed_password,
         phone=user_data.phone,
-        # role and is_active have defaults
+        role=user_data.role or "user",
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    if (user_data.role or "user") == "doctor":
+        doctor_profile = Doctor(
+            user_id=new_user.id,
+            specialization=user_data.specialization or "General Medicine",
+            license_number=f"DOC-{new_user.id}",
+            experience_years=1,
+            is_verified=False,
+            consultation_fee=50.0,
+        )
+        db.add(doctor_profile)
+        db.commit()
+
     return new_user
 
 @router.post("/login", response_model=Token)
@@ -203,3 +218,49 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: dict, db: Session = Depends(get_db)):
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        token = secrets.token_urlsafe(32)
+        reset = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+            used=False,
+        )
+        db.add(reset)
+        db.commit()
+    # Security: same response whether email exists or not.
+    return {"message": "If the account exists, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(payload: dict, db: Session = Depends(get_db)):
+    token = payload.get("token")
+    new_password = payload.get("new_password")
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="Token and new_password are required")
+
+    reset = (
+        db.query(PasswordResetToken)
+        .filter(PasswordResetToken.token == token, PasswordResetToken.used == False)
+        .first()
+    )
+    if not reset or reset.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.id == reset.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password_hash = get_password_hash(new_password)
+    reset.used = True
+    db.commit()
+    return {"message": "Password reset successful"}
