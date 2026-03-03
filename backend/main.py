@@ -216,7 +216,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-origins_str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
+default_origins = "http://localhost:5173,http://localhost:3000,https://ladenutricare.onrender.com"
+origins_str = os.getenv("CORS_ORIGINS", default_origins)
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
@@ -306,10 +307,11 @@ app.include_router(emergency_contacts.router, prefix="/api/emergency", tags=["Em
 
 if __name__ == "__main__":
     import uvicorn
+    port = int(os.getenv("PORT", "8000"))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,
+        port=port,
+        reload=False,
         log_level="info"
     )
