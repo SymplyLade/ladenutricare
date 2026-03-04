@@ -20,3 +20,4 @@ python-jose[cryptography]==3.3.0
 python-multipart==0.0.6
 httpx==0.25.0
 argon2-cffi
+apscheduler==3.10.4
