@@ -25,7 +25,7 @@ def get_verified_doctors(db: Session = Depends(get_db)):
             "name": doctor.user.name if doctor.user else "Unknown",
             "specialization": doctor.specialization,
             "experience_years": doctor.experience_years,
-            "consultation_fee": doctor.consultation_fee,
+            "consultation_fee": 10000.0,
             "license_number": doctor.license_number,
             "is_verified": doctor.is_verified,
             "profile_picture": doctor.user.profile_picture if doctor.user else None,

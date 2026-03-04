@@ -1,4 +1,4 @@
-// import { useState, useEffect } from 'react';
+﻿// import { useState, useEffect } from 'react';
 // import { Link } from 'react-router-dom';
 // import { getAppointments } from '../services/appointments';
 // import { CalendarIcon, ClockIcon, UserIcon, CreditCardIcon } from '@heroicons/react/24/outline';
@@ -86,7 +86,7 @@
 //                       <div className="flex items-center">
 //                         <CreditCardIcon className="h-5 w-5 text-gray-400 mr-1" />
 //                         <p className="text-sm text-gray-500">
-//                           ${apt.consultation_fee}
+//                           &#8358;{apt.consultation_fee}
 //                         </p>
 //                       </div>
 //                     </div>
@@ -154,6 +154,12 @@ const Appointments = () => {
     }
   };
 
+  const statusLabel = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'completed') return 'Doctor Seen ✓';
+    return normalized || 'pending';
+  };
+
   if (loading) return <div className="text-center py-10">Loading...</div>;
 
   return (
@@ -191,13 +197,13 @@ const Appointments = () => {
                         </p>
                         <div className="ml-2 flex-shrink-0 flex">
                           <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(apt.status)}`}>
-                            {apt.status}
+                            {statusLabel(apt.status)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <CreditCardIcon className="h-5 w-5 text-gray-400 mr-1" />
-                        <p className="text-sm text-gray-500">${apt.consultation_fee}</p>
+                        <p className="text-sm text-gray-500">&#8358;{apt.consultation_fee}</p>
                       </div>
                     </div>
                     <div className="mt-2 sm:flex sm:justify-between">
@@ -224,3 +230,5 @@ const Appointments = () => {
 };
 
 export default Appointments;
+
+

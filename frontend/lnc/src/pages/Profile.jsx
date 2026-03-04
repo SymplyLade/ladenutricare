@@ -1,7 +1,19 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { UserIcon, EnvelopeIcon, PhoneIcon, CalendarIcon, IdentificationIcon, CameraIcon } from '@heroicons/react/24/outline';
+import { UserIcon, EnvelopeIcon, PhoneIcon, CalendarIcon, IdentificationIcon, CameraIcon, MapPinIcon } from '@heroicons/react/24/outline';
+
+const LOCATION_OPTIONS = [
+  'Nigeria',
+  'Ghana',
+  'Kenya',
+  'South Africa',
+  'United Kingdom',
+  'United States',
+  'Canada',
+  'India',
+  'Other',
+];
 
 const Profile = () => {
   const { user, setUser } = useAuth();
@@ -12,7 +24,7 @@ const Profile = () => {
     age: user?.age || '',
     gender: user?.gender || '',
     blood_group: user?.blood_group || '',
-    address: user?.address || '',
+    location: user?.address || '',
   });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -28,7 +40,15 @@ const Profile = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      const response = await api.put('/users/profile', formData);
+      const payload = {
+        name: formData.name,
+        phone: formData.phone,
+        age: formData.age,
+        gender: formData.gender,
+        blood_group: formData.blood_group,
+        address: formData.location,
+      };
+      const response = await api.put('/users/profile', payload);
       setUser(response.data);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
     } catch (err) {
@@ -249,17 +269,34 @@ const Profile = () => {
           </div>
 
           <div className="sm:col-span-2">
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-              Address
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+              Location
             </label>
-            <textarea
-              name="address"
-              id="address"
-              rows={3}
-              value={formData.address}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
+            <div className="relative mt-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MapPinIcon className="h-5 w-5 text-gray-400" />
+              </div>
+              <select
+                name="location"
+                id="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="block w-full pl-10 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              >
+                <option value="">Select location</option>
+                {formData.location && !LOCATION_OPTIONS.includes(formData.location) && (
+                  <option value={formData.location}>{formData.location}</option>
+                )}
+                {LOCATION_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Used for localizing nutrition plans and recommendations.
+            </p>
           </div>
         </div>
 

@@ -406,6 +406,32 @@ class Appointment(Base):
     doctor = relationship("User", back_populates="doctor_appointments", foreign_keys=[doctor_id])
     payment = relationship("PaymentTransaction", back_populates="appointment", uselist=False, cascade="all, delete-orphan")
 
+
+class ConsultationNote(Base):
+    __tablename__ = "consultation_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    appointment_id = Column(Integer, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    summary = Column(Text, nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+
+class DoctorTask(Base):
+    __tablename__ = "doctor_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    appointment_id = Column(Integer, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=False)
+    consultation_note_id = Column(Integer, ForeignKey("consultation_notes.id", ondelete="SET NULL"), nullable=True)
+    task_text = Column(String(500), nullable=False)
+    reminder_time = Column(String(5), nullable=False)  # HH:MM
+    is_daily = Column(Boolean, default=True)
+    is_completed = Column(Boolean, default=False)
+    last_reminded_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
 # ─── NOTIFICATION MODEL ─────────────────────────────────────────
 class Notification(Base):
     __tablename__ = "notifications"

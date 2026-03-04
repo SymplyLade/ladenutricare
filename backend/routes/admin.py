@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import get_current_user
 from utils.notifications import create_notification
-from models import Appointment, Doctor, NotificationType, NutritionPlan, PaymentTransaction, User
+from models import ActivityLog, Appointment, Doctor, NotificationType, NutritionPlan, PaymentTransaction, User
 
 router = APIRouter()
 
@@ -39,6 +39,8 @@ def get_dashboard_stats(
         .all()
     )
     pending_verifications = db.query(Doctor).filter(Doctor.is_verified == False).count()
+    review_queue_count = db.query(ActivityLog).filter(ActivityLog.action == "human_review_trigger").count()
+    decision_log_count = db.query(ActivityLog).filter(ActivityLog.action == "clinical_decision").count()
 
     return {
         "totalUsers": total_users,
@@ -47,7 +49,61 @@ def get_dashboard_stats(
         "pendingAppointments": pending_appointments,
         "totalRevenue": round(sum(x[0] for x in total_revenue), 2),
         "pendingVerifications": pending_verifications,
+        "reviewQueueCount": review_queue_count,
+        "decisionLogCount": decision_log_count,
     }
+
+
+@router.get("/review-queue")
+def get_review_queue(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_admin(current_user)
+    logs = (
+        db.query(ActivityLog)
+        .filter(ActivityLog.action == "human_review_trigger")
+        .order_by(ActivityLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": log.id,
+            "user_id": log.user_id,
+            "action": log.action,
+            "description": log.description,
+            "created_at": log.created_at,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/clinical-decisions")
+def get_clinical_decisions(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_admin(current_user)
+    logs = (
+        db.query(ActivityLog)
+        .filter(ActivityLog.action == "clinical_decision")
+        .order_by(ActivityLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": log.id,
+            "user_id": log.user_id,
+            "action": log.action,
+            "description": log.description,
+            "created_at": log.created_at,
+        }
+        for log in logs
+    ]
 
 
 @router.get("/users")

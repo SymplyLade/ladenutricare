@@ -98,6 +98,8 @@ class MedicationCreate(BaseModel):
     dosage: str
     frequency: str
     time_slots: Optional[List[str]] = None
+    end_date: Optional[date] = None
+    duration_days: Optional[int] = Field(default=None, ge=1, le=3650)
     notes: Optional[str] = None
 
 
@@ -107,6 +109,8 @@ class MedicationUpdate(BaseModel):
     frequency: Optional[str] = None
     time_slots: Optional[List[str]] = None
     taken_today: Optional[bool] = None
+    end_date: Optional[date] = None
+    duration_days: Optional[int] = Field(default=None, ge=1, le=3650)
     notes: Optional[str] = None
 
 
@@ -117,6 +121,7 @@ class MedicationResponse(BaseModel):
     frequency: str
     time_slots: Optional[List[str]]
     taken_today: bool
+    end_date: Optional[datetime]
     notes: Optional[str]
 
     class Config:
@@ -130,9 +135,27 @@ class SymptomCheckRequest(BaseModel):
 
 class SymptomCheckResponse(BaseModel):
     recommended_department: str
+    doctor_type: Optional[str] = None
     urgency_level: str
+    confidence: Optional[str] = None
+    matched_keywords: Optional[List[str]] = None
+    emergency_flag: Optional[bool] = None
+    next_steps: Optional[List[str]] = None
     analysis: str
     advice: Optional[str]
+
+
+class SymptomFollowUpRequest(BaseModel):
+    status: str = Field(min_length=4, max_length=20)  # better, same, worse
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class SymptomFollowUpResponse(BaseModel):
+    status: str
+    recommended_department: str
+    urgency_level: str
+    next_action: str
+    message: str
 
 
 class EmergencyContactCreate(BaseModel):
@@ -192,6 +215,47 @@ class CustomNutritionPlanCreate(BaseModel):
     desired_meal_plan: str = Field(min_length=10, max_length=3000)
 
 
+class AutoNutritionPlanCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=255)
+    country: str = Field(min_length=2, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class DoctorTaskItemCreate(BaseModel):
+    task_text: str = Field(min_length=3, max_length=500)
+    reminder_time: str = Field(min_length=5, max_length=5)  # HH:MM
+    is_daily: bool = True
+
+
+class ConsultationDocumentCreate(BaseModel):
+    summary: str = Field(min_length=5, max_length=4000)
+    tasks: List[DoctorTaskItemCreate] = Field(default_factory=list)
+
+
+class ConsultationNoteResponse(BaseModel):
+    id: int
+    appointment_id: int
+    doctor_id: Optional[int] = None
+    summary: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DoctorTaskResponse(BaseModel):
+    id: int
+    appointment_id: int
+    task_text: str
+    reminder_time: str
+    is_daily: bool
+    is_completed: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

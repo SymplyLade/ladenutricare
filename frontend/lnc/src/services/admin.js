@@ -57,4 +57,6 @@ export const getAllMealPlans = () => api.get('/admin/meal-plans');
 export const createMealPlan = (data) => api.post('/admin/meal-plans', data);
 export const updateMealPlan = (id, data) => api.put(`/admin/meal-plans/${id}`, data);
 export const deleteMealPlan = (id) => api.delete(`/admin/meal-plans/${id}`);
+export const getReviewQueue = (limit = 100) => api.get(`/admin/review-queue?limit=${limit}`);
+export const getClinicalDecisions = (limit = 100) => api.get(`/admin/clinical-decisions?limit=${limit}`);
 

@@ -166,10 +166,6 @@ import logging
 from dotenv import load_dotenv
 from services.reminder_service import start_scheduler
 
-
-start_scheduler()
-
-
 load_dotenv()
 
 from database import engine, SessionLocal, Base, test_connection
@@ -179,7 +175,7 @@ from models import (
     ChatHistory, Notification, ExpiryCheck
 )
 from routes import (
-    auth, users, doctors, appointments, medications, symptoms,
+    auth, users, doctors, appointments, consultations, medications, symptoms,
     chatbot, payments, notifications, nutrition,
     video_consultation, admin, expiry_checker, emergency_contacts
 )
@@ -202,9 +198,11 @@ async def lifespan(app: FastAPI):
         logger.error("Database connection failed. Exiting.")
         raise RuntimeError("Database connection failed")
     Base.metadata.create_all(bind=engine)
+    scheduler = start_scheduler()
     logger.info("Database tables verified/created.")
     yield
     logger.info("Shutting down...")
+    scheduler.shutdown(wait=False)
     engine.dispose()
 
 app = FastAPI(
@@ -294,6 +292,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(doctors.router, prefix="/api/doctors", tags=["Doctors"])
 app.include_router(appointments.router, prefix="/api/appointments", tags=["Appointments"])
+app.include_router(consultations.router, prefix="/api/consultations", tags=["Consultations"])
 app.include_router(medications.router, prefix="/api/medications", tags=["Medications"])
 app.include_router(symptoms.router, prefix="/api/symptoms", tags=["Symptoms"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["Chatbot"])

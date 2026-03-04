@@ -83,7 +83,7 @@
 
 import { useState, useEffect } from 'react';
 import { getDashboardStats } from '../../services/admin';
-import { UsersIcon, UserGroupIcon, CalendarIcon, CreditCardIcon, CurrencyDollarIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, UserGroupIcon, CalendarIcon, CurrencyDollarIcon, CheckCircleIcon, ExclamationTriangleIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import StatsCard from '../components/StatsCard';
 
 const AdminDashboard = () => {
@@ -113,6 +113,8 @@ const AdminDashboard = () => {
     { name: 'Pending Appointments', value: stats?.pendingAppointments || 0, icon: CalendarIcon, color: 'bg-yellow-500' },
     { name: 'Total Revenue', value: `$${stats?.totalRevenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-indigo-500' },
     { name: 'Pending Verifications', value: stats?.pendingVerifications || 0, icon: CheckCircleIcon, color: 'bg-red-500' },
+    { name: 'Review Queue', value: stats?.reviewQueueCount || 0, icon: ExclamationTriangleIcon, color: 'bg-rose-500' },
+    { name: 'Clinical Logs', value: stats?.decisionLogCount || 0, icon: ClipboardDocumentListIcon, color: 'bg-cyan-600' },
   ];
 
   if (loading) return <div className="text-center py-10">Loading dashboard...</div>;

@@ -1,96 +1,105 @@
-import { useEffect, useState } from 'react';
-import { InformationCircleIcon } from '@heroicons/react/24/outline';
-import { Link, useParams } from 'react-router-dom';
-import { assignNutritionPlan, getMealPlans, getPatientType } from '../services/nutrition';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { generateNutritionPlanFromTitle } from '../services/nutrition';
+
+const LOCATION_OPTIONS = [
+  'Nigeria',
+  'Ghana',
+  'Kenya',
+  'South Africa',
+  'United Kingdom',
+  'United States',
+  'Canada',
+  'India',
+  'Other',
+];
 
 const PatientTypeDetail = () => {
   const { patientTypeId } = useParams();
-  const [patientType, setPatientType] = useState(null);
-  const [mealPlans, setMealPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const conditionTitle = useMemo(
+    () => decodeURIComponent(String(patientTypeId || '')).trim(),
+    [patientTypeId]
+  );
+
+  const [country, setCountry] = useState('Nigeria');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [typeRes, planRes] = await Promise.all([
-          getPatientType(patientTypeId),
-          getMealPlans(patientTypeId),
-        ]);
-        setPatientType(typeRes.data);
-        setMealPlans(planRes.data);
-      } catch (err) {
-        setError('Failed to load nutrition details.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleGenerate = async (e) => {
+    e.preventDefault();
+    setError('');
 
-    fetchData();
-  }, [patientTypeId]);
+    if (!conditionTitle) {
+      setError('Condition is missing.');
+      return;
+    }
+    if (country.trim().length < 2) {
+      setError('Please enter your country before generating.');
+      return;
+    }
 
-  const handleAssign = async (planId) => {
+    setLoading(true);
     try {
-      await assignNutritionPlan(planId);
-      alert('Nutrition plan set successfully.');
+      await generateNutritionPlanFromTitle({
+        title: conditionTitle,
+        country: country.trim(),
+        description: `Generated from condition: ${conditionTitle}`,
+      });
+      navigate('/my-nutrition-plan', { replace: true });
     } catch (err) {
-      alert('Failed to set nutrition plan.');
+      setError(err.response?.data?.detail || 'Failed to generate meal plan from condition.');
+      setLoading(false);
     }
   };
 
-  if (loading) return <div className="text-center py-10">Loading...</div>;
-  if (error || !patientType) {
-    return <div className="max-w-7xl mx-auto py-8 px-4 text-red-500">{error || 'Patient type not found'}</div>;
-  }
-
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <nav className="flex mb-6 text-sm">
-        <Link to="/nutrition" className="text-indigo-600 hover:text-indigo-500">Nutrition</Link>
-        <span className="mx-2 text-gray-500">/</span>
-        <span className="text-gray-700">{patientType.name}</span>
-      </nav>
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Generate Meal Plan</h1>
+        <p className="text-gray-600 mb-6">
+          Condition: <span className="font-semibold text-gray-800">{conditionTitle || 'N/A'}</span>
+        </p>
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">{patientType.name}</h1>
-        <p className="text-gray-600 mb-6">{patientType.description}</p>
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">General Advice</h2>
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
-          <div className="flex">
-            <InformationCircleIcon className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
-            <p className="text-gray-700">{patientType.general_advice}</p>
-          </div>
-        </div>
+        {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-100 text-red-700 px-4 py-3">{error}</div>}
 
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Recommended Meal Plans</h2>
-        {mealPlans.length === 0 ? (
-          <p className="text-gray-500">No meal plans available for this condition yet.</p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {mealPlans.map((plan) => (
-              <div key={plan.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">{plan.title}</h3>
-                <p className="text-gray-600 mb-4">{plan.description}</p>
-                <div className="space-y-3">
-                  {Object.entries(plan.meals || {}).map(([mealTime, items]) => (
-                    <div key={mealTime}>
-                      <h4 className="font-medium text-gray-700 capitalize">{mealTime}</h4>
-                      <ul className="list-disc list-inside text-gray-600 ml-2">
-                        {Array.isArray(items) && items.map((item, idx) => <li key={idx}>{item}</li>)}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => handleAssign(plan.id)}
-                  className="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-                >
-                  Set as my plan
-                </button>
-              </div>
-            ))}
+        <form onSubmit={handleGenerate} className="space-y-4">
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+              Country / Region
+            </label>
+            <select
+              id="country"
+              name="country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              required
+            >
+              {LOCATION_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-end">
+            <Link
+              to="/nutrition"
+              className="inline-flex items-center justify-center bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+            >
+              Back
+            </Link>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Generating...' : 'Generate Plan'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

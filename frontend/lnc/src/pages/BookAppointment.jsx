@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-import { createAppointment } from '../services/appointments';
+import { createAppointmentWithPayment } from '../services/appointments';
 import { getVerifiedDoctors } from '../services/doctors';
 
 const DEFAULT_SPECIALIZATION = 'General Medicine';
@@ -15,6 +15,11 @@ const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name ||
 
 const BookAppointment = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const symptomState = location.state || {};
+  const autoDepartment = normalizeSpecialization(symptomState.department);
+  const fromSymptom = Boolean(symptomState.fromSymptom);
+
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [doctorLoadError, setDoctorLoadError] = useState('');
@@ -23,6 +28,7 @@ const BookAppointment = () => {
     doctor_id: '',
     appointment_date: '',
     appointment_time: '',
+    payment_method: '',
     notes: '',
   });
   const [loading, setLoading] = useState(false);
@@ -46,6 +52,11 @@ const BookAppointment = () => {
     }
   };
 
+  const matchedDoctors = useMemo(() => {
+    if (!fromSymptom) return doctors;
+    return doctors.filter((doctor) => normalizeSpecialization(doctor.specialization) === autoDepartment);
+  }, [doctors, fromSymptom, autoDepartment]);
+
   const groupedDoctors = useMemo(() => {
     const groups = {};
     doctors.forEach((doctor) => {
@@ -61,10 +72,33 @@ const BookAppointment = () => {
       .sort((a, b) => a[0].localeCompare(b[0]));
   }, [doctors]);
 
+  const suggestedDoctors = useMemo(() => {
+    return [...matchedDoctors].sort(
+      (a, b) => (Number(a.consultation_fee) - Number(b.consultation_fee))
+        || (Number(b.experience_years) - Number(a.experience_years))
+        || sortByName(a, b)
+    );
+  }, [matchedDoctors]);
+
   const selectedDoctor = useMemo(
     () => doctors.find((doctor) => String(doctor.doctor_user_id) === String(formData.doctor_id)),
     [doctors, formData.doctor_id]
   );
+
+  useEffect(() => {
+    if (!fromSymptom || matchedDoctors.length === 0) return;
+    const sorted = [...matchedDoctors].sort(
+      (a, b) => (Number(a.consultation_fee) - Number(b.consultation_fee))
+        || (Number(b.experience_years) - Number(a.experience_years))
+    );
+    const recommended = sorted[0];
+    setFormData((prev) => ({
+      ...prev,
+      doctor_id: prev.doctor_id || String(recommended.doctor_user_id),
+      department: prev.department || normalizeSpecialization(recommended.specialization),
+      notes: prev.notes || symptomState.notes || '',
+    }));
+  }, [fromSymptom, matchedDoctors, symptomState.notes]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,7 +117,7 @@ const BookAppointment = () => {
     setLoading(true);
     setError('');
     try {
-      await createAppointment(formData);
+      await createAppointmentWithPayment(formData);
       navigate('/appointments');
     } catch (err) {
       setError(err.response?.data?.detail || err.response?.data?.error || 'Failed to book appointment');
@@ -102,6 +136,12 @@ const BookAppointment = () => {
 
       {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
       {doctorLoadError && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{doctorLoadError}</div>}
+      {fromSymptom && (
+        <div className="bg-indigo-50 border border-indigo-200 text-indigo-800 p-3 rounded mb-4">
+          Auto-matching doctors for <span className="font-semibold">{autoDepartment}</span>.
+          {matchedDoctors.length === 0 ? ' No exact specialist found, showing all available doctors.' : ''}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow-sm rounded-lg p-6">
         <div>
@@ -117,11 +157,20 @@ const BookAppointment = () => {
             <option value="">
               {loadingDoctors ? 'Loading doctors...' : hasDoctors ? 'Choose a doctor' : 'No verified doctors available'}
             </option>
+            {fromSymptom && suggestedDoctors.length > 0 && (
+              <optgroup label={`Suggested for ${autoDepartment}`}>
+                {suggestedDoctors.map((doc) => (
+                  <option key={`suggested-${doc.doctor_user_id}`} value={doc.doctor_user_id}>
+                    Dr. {doc.name} (&#8358;{doc.consultation_fee})
+                  </option>
+                ))}
+              </optgroup>
+            )}
             {groupedDoctors.map(([specialization, list]) => (
               <optgroup key={specialization} label={specialization}>
                 {list.map((doc) => (
                   <option key={doc.doctor_user_id} value={doc.doctor_user_id}>
-                    Dr. {doc.name} (${doc.consultation_fee})
+                    Dr. {doc.name} (&#8358;{doc.consultation_fee})
                   </option>
                 ))}
               </optgroup>
@@ -186,6 +235,28 @@ const BookAppointment = () => {
         </div>
 
         <div>
+          <label htmlFor="payment_method" className="block text-sm font-medium text-gray-700">
+            Payment Method *
+          </label>
+          <select
+            name="payment_method"
+            id="payment_method"
+            required
+            value={formData.payment_method}
+            onChange={handleChange}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          >
+            <option value="">Select method</option>
+            <option value="mastercard">Mastercard</option>
+            <option value="visa">Visa</option>
+            <option value="verve">Verve</option>
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="ussd">USSD</option>
+            <option value="wallet">Wallet</option>
+          </select>
+        </div>
+
+        <div>
           <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
             Additional Notes
           </label>
@@ -212,7 +283,7 @@ const BookAppointment = () => {
             disabled={disableSubmit}
             className="w-full sm:w-auto bg-indigo-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Booking...' : 'Book Appointment'}
+            {loading ? 'Processing Payment...' : 'Pay and Book Appointment'}
           </button>
         </div>
       </form>
