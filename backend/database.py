@@ -8,18 +8,36 @@ from sqlalchemy.orm import sessionmaker
 load_dotenv()
 
 
+def _env_value(*keys: str) -> str | None:
+    """
+    Read env vars and ignore placeholder values like "DB_HOST" or "MYSQLHOST".
+    This helps when Render env vars were copied as template strings.
+    """
+    for key in keys:
+        raw = os.getenv(key)
+        if raw is None:
+            continue
+        value = raw.strip()
+        if not value:
+            continue
+        if value.upper() == key.upper():
+            continue
+        return value
+    return None
+
+
 def _resolve_database_url() -> str:
-    explicit_url = os.getenv("DATABASE_URL") or os.getenv("DATABASE_PUBLIC_URL")
+    explicit_url = _env_value("DATABASE_URL", "DATABASE_PUBLIC_URL")
     if explicit_url:
         if explicit_url.startswith("mysql://"):
             return explicit_url.replace("mysql://", "mysql+pymysql://", 1)
         return explicit_url
 
-    db_user = os.getenv("DB_USER") or os.getenv("MYSQLUSER") or "root"
-    db_password = os.getenv("DB_PASSWORD") or os.getenv("MYSQLPASSWORD") or "password"
-    db_host = os.getenv("DB_HOST") or os.getenv("MYSQLHOST") or "localhost"
-    db_port = os.getenv("DB_PORT") or os.getenv("MYSQLPORT") or "3306"
-    db_name = os.getenv("DB_NAME") or os.getenv("MYSQLDATABASE") or "ladenutricare"
+    db_user = _env_value("DB_USER", "MYSQLUSER") or "root"
+    db_password = _env_value("DB_PASSWORD", "MYSQLPASSWORD") or "password"
+    db_host = _env_value("DB_HOST", "MYSQLHOST") or "localhost"
+    db_port = _env_value("DB_PORT", "MYSQLPORT") or "3306"
+    db_name = _env_value("DB_NAME", "MYSQLDATABASE") or "ladenutricare"
 
     if os.getenv("RENDER") and db_host in {"localhost", "127.0.0.1"}:
         raise RuntimeError(
