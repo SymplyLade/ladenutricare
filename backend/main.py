@@ -247,6 +247,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         },
     )
 
+
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
