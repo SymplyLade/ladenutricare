@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: ladenutricare-api
+    runtime: python
+    pythonVersion: 3.12
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: JWT_SECRET
+        scope: run
+        sync: false
+      - key: DB_USER
+        scope: run
+      - key: DB_PASSWORD
+        scope: run
+      - key: DB_HOST
+        scope: run
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        scope: run
+      - key: CORS_ORIGINS
+        value: "https://yourdomain.com,http://localhost:3000"
+      - key: PYTHONUNBUFFERED
+        value: "1"
