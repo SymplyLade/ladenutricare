@@ -26,12 +26,32 @@ def _env_value(*keys: str) -> str | None:
     return None
 
 
+def _looks_like_placeholder_database_url(url: str) -> bool:
+    upper_url = url.upper()
+    placeholder_tokens = (
+        "DB_USER",
+        "DB_PASSWORD",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "<USER>",
+        "<PASSWORD>",
+        "<HOST>",
+        "<PORT>",
+        "<DBNAME>",
+    )
+    return any(token in upper_url for token in placeholder_tokens)
+
+
 def _resolve_database_url() -> str:
     explicit_url = _env_value("DATABASE_URL", "DATABASE_PUBLIC_URL")
     if explicit_url:
-        if explicit_url.startswith("mysql://"):
-            return explicit_url.replace("mysql://", "mysql+pymysql://", 1)
-        return explicit_url
+        if _looks_like_placeholder_database_url(explicit_url):
+            explicit_url = None
+        else:
+            if explicit_url.startswith("mysql://"):
+                return explicit_url.replace("mysql://", "mysql+pymysql://", 1)
+            return explicit_url
 
     db_user = _env_value("DB_USER", "MYSQLUSER") or "root"
     db_password = _env_value("DB_PASSWORD", "MYSQLPASSWORD") or "password"
