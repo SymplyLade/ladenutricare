@@ -154,6 +154,9 @@ const Appointments = () => {
     }
   };
 
+
+
+  
   const statusLabel = (status) => {
     const normalized = String(status || '').toLowerCase();
     if (normalized === 'completed') return 'Doctor Seen ✓';
