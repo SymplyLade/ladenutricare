@@ -169,6 +169,7 @@ from services.reminder_service import start_scheduler
 load_dotenv()
 
 from database import engine, SessionLocal, Base, test_connection
+
 from models import (
     User, Appointment, Medication, Symptom,
     EmergencyContact, PaymentTransaction, NutritionPlan,
