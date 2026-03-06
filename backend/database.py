@@ -4,8 +4,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 def _env_value(*keys: str) -> str | None:
@@ -60,8 +62,8 @@ def _resolve_database_url() -> str:
     db_name = _env_value("DB_NAME", "MYSQLDATABASE") or "ladenutricare"
 
     if os.getenv("RENDER") and db_host in {"localhost", "127.0.0.1"}:
-        raise RuntimeError(
-            "Database is not configured for Render. Set DATABASE_URL (or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME) to your remote MySQL instance."
+        logger.warning(
+            "Render is using localhost DB_HOST. Set DATABASE_URL (recommended) or remote DB_HOST/DB_USER/DB_PASSWORD/DB_NAME."
         )
 
     return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"

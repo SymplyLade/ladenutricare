@@ -160,6 +160,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 import os
 import logging
@@ -195,12 +196,19 @@ if missing_vars:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up LadeNutriCare API...")
-    if not test_connection():
-        logger.error("Database connection failed. Exiting.")
-        raise RuntimeError("Database connection failed")
-    Base.metadata.create_all(bind=engine)
+    require_db_on_startup = os.getenv("REQUIRE_DB_ON_STARTUP", "false").lower() == "true"
+    db_connected = test_connection()
+    if not db_connected:
+        message = "Database connection failed during startup."
+        if require_db_on_startup:
+            logger.error("%s Exiting because REQUIRE_DB_ON_STARTUP=true.", message)
+            raise RuntimeError("Database connection failed")
+        logger.warning("%s Continuing startup because REQUIRE_DB_ON_STARTUP=false.", message)
+    else:
+        Base.metadata.create_all(bind=engine)
     scheduler = start_scheduler()
-    logger.info("Database tables verified/created.")
+    if db_connected:
+        logger.info("Database tables verified/created.")
     yield
     logger.info("Shutting down...")
     scheduler.shutdown(wait=False)
@@ -270,7 +278,7 @@ def get_db():
 @app.get("/api/health")
 async def health_check(db: Session = Depends(get_db)):
     try:
-        db.execute("SELECT 1").first()
+        db.execute(text("SELECT 1")).first()
         db_status = "connected"
     except Exception as e:
         db_status = f"error: {str(e)}"
