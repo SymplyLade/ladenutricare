@@ -150,7 +150,7 @@ from datetime import datetime, timedelta
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -184,7 +184,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         password_hash=hashed_password,
         phone=user_data.phone,
-        role=UserRole(requested_role),
+        role=requested_role,
     )
     db.add(new_user)
     try:
@@ -192,6 +192,9 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Registration failed due to invalid or duplicate data")
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Registration failed. Please try again.")
     db.refresh(new_user)
 
     if requested_role == UserRole.DOCTOR.value:
@@ -204,7 +207,14 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             consultation_fee=50.0,
         )
         db.add(doctor_profile)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Doctor profile could not be created")
+        except SQLAlchemyError:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Doctor profile setup failed. Please try again.")
 
     return new_user
 
