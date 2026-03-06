@@ -456,6 +456,14 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const extractErrorMessage = (err) => {
+    const payload = err?.response?.data;
+    if (Array.isArray(payload?.detail)) {
+      return payload.detail.map((item) => item?.msg).filter(Boolean).join(', ') || 'Registration failed';
+    }
+    return payload?.detail || payload?.error || err?.message || 'Registration failed';
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -479,7 +487,7 @@ const Register = () => {
       });
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.error || 'Registration failed');
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }

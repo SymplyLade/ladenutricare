@@ -150,10 +150,11 @@ from datetime import datetime, timedelta
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Doctor, PasswordResetToken, User
+from models import Doctor, PasswordResetToken, User, UserRole
 from schemas import UserCreate, UserLogin, Token, UserResponse
 from utils.auth import (
     verify_password,
@@ -172,6 +173,10 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    requested_role = (user_data.role or "user").strip().lower()
+    if requested_role not in {role.value for role in UserRole}:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
     # Create new user
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
@@ -179,13 +184,17 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         password_hash=hashed_password,
         phone=user_data.phone,
-        role=user_data.role or "user",
+        role=UserRole(requested_role),
     )
     db.add(new_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Registration failed due to invalid or duplicate data")
     db.refresh(new_user)
 
-    if (user_data.role or "user") == "doctor":
+    if requested_role == UserRole.DOCTOR.value:
         doctor_profile = Doctor(
             user_id=new_user.id,
             specialization=user_data.specialization or "General Medicine",
