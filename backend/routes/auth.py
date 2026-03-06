@@ -148,6 +148,7 @@
 
 from datetime import datetime, timedelta
 import secrets
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -165,58 +166,66 @@ from utils.auth import (
 from dependencies import get_current_user
 
 router = APIRouter()  # No extra prefix
+logger = logging.getLogger(__name__)
 
 @router.post("/register", response_model=UserResponse)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    requested_role = (user_data.role or "user").strip().lower()
-    if requested_role not in {role.value for role in UserRole}:
-        raise HTTPException(status_code=400, detail="Invalid role")
-
-    # Create new user
-    hashed_password = get_password_hash(user_data.password)
-    new_user = User(
-        name=user_data.name,
-        email=user_data.email,
-        password_hash=hashed_password,
-        phone=user_data.phone,
-        role=requested_role,
-    )
-    db.add(new_user)
     try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Registration failed due to invalid or duplicate data")
-    except SQLAlchemyError:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Registration failed. Please try again.")
-    db.refresh(new_user)
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    if requested_role == UserRole.DOCTOR.value:
-        doctor_profile = Doctor(
-            user_id=new_user.id,
-            specialization=user_data.specialization or "General Medicine",
-            license_number=f"DOC-{new_user.id}",
-            experience_years=1,
-            is_verified=False,
-            consultation_fee=50.0,
+        requested_role = (user_data.role or "user").strip().lower()
+        if requested_role not in {role.value for role in UserRole}:
+            raise HTTPException(status_code=400, detail="Invalid role")
+
+        # Create new user
+        hashed_password = get_password_hash(user_data.password)
+        new_user = User(
+            name=user_data.name,
+            email=user_data.email,
+            password_hash=hashed_password,
+            phone=user_data.phone,
+            role=requested_role,
         )
-        db.add(doctor_profile)
+        db.add(new_user)
         try:
             db.commit()
         except IntegrityError:
             db.rollback()
-            raise HTTPException(status_code=400, detail="Doctor profile could not be created")
+            raise HTTPException(status_code=400, detail="Registration failed due to invalid or duplicate data")
         except SQLAlchemyError:
             db.rollback()
-            raise HTTPException(status_code=500, detail="Doctor profile setup failed. Please try again.")
+            raise HTTPException(status_code=500, detail="Registration failed. Please try again.")
+        db.refresh(new_user)
 
-    return new_user
+        if requested_role == UserRole.DOCTOR.value:
+            doctor_profile = Doctor(
+                user_id=new_user.id,
+                specialization=user_data.specialization or "General Medicine",
+                license_number=f"DOC-{new_user.id}",
+                experience_years=1,
+                is_verified=False,
+                consultation_fee=50.0,
+            )
+            db.add(doctor_profile)
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+                raise HTTPException(status_code=400, detail="Doctor profile could not be created")
+            except SQLAlchemyError:
+                db.rollback()
+                raise HTTPException(status_code=500, detail="Doctor profile setup failed. Please try again.")
+
+        return new_user
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Unexpected registration failure")
+        raise HTTPException(status_code=500, detail=f"Registration failed unexpectedly: {exc.__class__.__name__}")
 
 @router.post("/login", response_model=Token)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
