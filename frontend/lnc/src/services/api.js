@@ -1,16 +1,18 @@
 import axios from 'axios';
 
+const DEFAULT_PROD_API_BASE_URL = 'https://ladenutricare-22.onrender.com/api';
+
 const resolveApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  if (envUrl) return envUrl.replace(/\/+$/, '');
 
   if (typeof window !== 'undefined') {
-    const { origin, hostname } = window.location;
+    const { hostname } = window.location;
     const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
-    return isLocalHost ? 'http://localhost:8000/api' : `${origin}/api`;
+    return isLocalHost ? 'http://localhost:8000/api' : DEFAULT_PROD_API_BASE_URL;
   }
 
-  return 'http://localhost:8000/api';
+  return DEFAULT_PROD_API_BASE_URL;
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -22,7 +24,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor – add token to every request
+// Request interceptor - add token to every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -34,14 +36,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor – handle 401 errors (token expired)
+// Response interceptor - handle 401 errors (token expired)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
       localStorage.removeItem('access_token');
-      // You can also trigger a logout event
       window.location.href = '/login';
     }
     return Promise.reject(error);
