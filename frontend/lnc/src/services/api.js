@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const DEFAULT_PROD_API_BASE_URL = 'https://ladenutricare-22.onrender.com/api';
+const DEFAULT_PROD_API_BASE_URL = 'https://ladenutricare.onrender.com/api';
 
 const resolveApiBaseUrl = () => {
   const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
