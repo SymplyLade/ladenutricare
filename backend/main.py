@@ -179,7 +179,7 @@ from models import (
 from routes import (
     auth, users, doctors, appointments, consultations, medications, symptoms,
     chatbot, payments, notifications, nutrition,
-    video_consultation, admin, expiry_checker, emergency_contacts
+    video_consultation, admin, expiry_checker, emergency_contacts, internal_cron
 )
 
 logging.basicConfig(
@@ -196,7 +196,8 @@ if missing_vars:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up LadeNutriCare API...")
-    require_db_on_startup = os.getenv("REQUIRE_DB_ON_STARTUP", "false").lower() == "true"
+    default_require_db = "true" if os.getenv("VERCEL") else "false"
+    require_db_on_startup = os.getenv("REQUIRE_DB_ON_STARTUP", default_require_db).lower() == "true"
     db_connected = test_connection()
     if not db_connected:
         message = "Database connection failed during startup."
@@ -209,7 +210,10 @@ async def lifespan(app: FastAPI):
         ensure_appointment_workflow_schema()
     # Reminder jobs query the database every minute. Do not start them when
     # the API is running in degraded mode without a working database.
-    scheduler = start_scheduler() if db_connected else None
+    run_background_scheduler = os.getenv(
+        "RUN_BACKGROUND_SCHEDULER", "false" if os.getenv("VERCEL") else "true"
+    ).lower() == "true"
+    scheduler = start_scheduler() if db_connected and run_background_scheduler else None
     if db_connected:
         logger.info("Database tables verified/created.")
     yield
@@ -229,7 +233,7 @@ app = FastAPI(
 
 default_origins = (
     "http://localhost:5173,http://localhost:3000,"
-    "https://ladenutricare.onrender.com,https://ladenutricare-jae5.vercel.app"
+    "https://ladenutricare-jae5.vercel.app"
 )
 origins_str = os.getenv("CORS_ORIGINS", default_origins)
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
@@ -323,6 +327,7 @@ app.include_router(video_consultation.router, prefix="/api/video", tags=["Video 
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(expiry_checker.router, prefix="/api/expiry", tags=["Expiry Checker"])
 app.include_router(emergency_contacts.router, prefix="/api/emergency", tags=["Emergency"])
+app.include_router(internal_cron.router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 def _env_value(*keys: str) -> str | None:
     """
     Read env vars and ignore placeholder values like "DB_HOST" or "MYSQLHOST".
-    This helps when Render env vars were copied as template strings.
     """
     for key in keys:
         raw = os.getenv(key)
@@ -60,14 +59,16 @@ def _resolve_database_url() -> str:
             return explicit_url
 
     # Keep a fresh local checkout usable without requiring a developer to
-    # install and configure MySQL. Production deployments should provide a
-    # database URL or the DB_* / MYSQL* variables below.
+    # install and configure a database. Production deployments should provide
+    # a database URL or the DB_* / MYSQL* variables below.
     has_database_config = any(
         _env_value(key) is not None
         for key in ("DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME",
                     "MYSQLUSER", "MYSQLPASSWORD", "MYSQLHOST", "MYSQLPORT", "MYSQLDATABASE")
     )
-    if not has_database_config and not os.getenv("RENDER"):
+    if not has_database_config:
+        if os.getenv("VERCEL"):
+            raise RuntimeError("DATABASE_URL is required for a Vercel deployment.")
         return "sqlite:///./ladenutricare.db"
 
     db_user = _env_value("DB_USER", "MYSQLUSER") or "root"
@@ -75,11 +76,6 @@ def _resolve_database_url() -> str:
     db_host = _env_value("DB_HOST", "MYSQLHOST") or "localhost"
     db_port = _env_value("DB_PORT", "MYSQLPORT") or "3306"
     db_name = _env_value("DB_NAME", "MYSQLDATABASE") or "ladenutricare"
-
-    if os.getenv("RENDER") and db_host in {"localhost", "127.0.0.1"}:
-        logger.warning(
-            "Render is using localhost DB_HOST. Set DATABASE_URL (recommended) or remote DB_HOST/DB_USER/DB_PASSWORD/DB_NAME."
-        )
 
     return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
