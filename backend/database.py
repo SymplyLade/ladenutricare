@@ -51,6 +51,10 @@ def _resolve_database_url() -> str:
         if _looks_like_placeholder_database_url(explicit_url):
             explicit_url = None
         else:
+            if explicit_url.startswith("postgres://"):
+                return explicit_url.replace("postgres://", "postgresql+psycopg://", 1)
+            if explicit_url.startswith("postgresql://"):
+                return explicit_url.replace("postgresql://", "postgresql+psycopg://", 1)
             if explicit_url.startswith("mysql://"):
                 return explicit_url.replace("mysql://", "mysql+pymysql://", 1)
             return explicit_url
@@ -93,7 +97,10 @@ if not DATABASE_URL.startswith("sqlite:"):
 
 ssl_ca = os.getenv("DB_SSL_CA")
 if ssl_ca:
-    engine_kwargs["connect_args"] = {"ssl": {"ca": ssl_ca}}
+    if DATABASE_URL.startswith("postgresql+psycopg://"):
+        engine_kwargs["connect_args"] = {"sslrootcert": ssl_ca}
+    else:
+        engine_kwargs["connect_args"] = {"ssl": {"ca": ssl_ca}}
 
 engine = create_engine(DATABASE_URL, **engine_kwargs)
 
