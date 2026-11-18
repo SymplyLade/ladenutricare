@@ -169,7 +169,7 @@ from services.reminder_service import start_scheduler
 
 load_dotenv()
 
-from database import engine, SessionLocal, Base, test_connection
+from database import engine, SessionLocal, Base, ensure_appointment_workflow_schema, test_connection
 
 from models import (
     User, Appointment, Medication, Symptom,
@@ -206,19 +206,23 @@ async def lifespan(app: FastAPI):
         logger.warning("%s Continuing startup because REQUIRE_DB_ON_STARTUP=false.", message)
     else:
         Base.metadata.create_all(bind=engine)
-    scheduler = start_scheduler()
+        ensure_appointment_workflow_schema()
+    # Reminder jobs query the database every minute. Do not start them when
+    # the API is running in degraded mode without a working database.
+    scheduler = start_scheduler() if db_connected else None
     if db_connected:
         logger.info("Database tables verified/created.")
     yield
     logger.info("Shutting down...")
-    scheduler.shutdown(wait=False)
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
     engine.dispose()
 
 app = FastAPI(
     title="LadeNutriCare Telemedicine API",
     description="Complete telemedicine platform with video consultation, nutrition guide, and chatbot",
     version="1.0.0",
-    docs_url="/api/docs",
+    docs_url="/docs",
     redoc_url="/api/redoc",
     lifespan=lifespan,
 )
@@ -294,7 +298,7 @@ async def health_check(db: Session = Depends(get_db)):
 async def root():
     return {
         "message": "LadeNutriCare Telemedicine API",
-        "docs": "/api/docs",
+        "docs": "/docs",
         "version": "1.0.0"
     }
 

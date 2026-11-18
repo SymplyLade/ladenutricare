@@ -1,20 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from uuid import uuid4
-
 from database import get_db
-from models import Appointment, Doctor, NotificationType, PaymentTransaction, User
+from models import Appointment, AppointmentStatus, Doctor, NotificationType, User, UserRole
 from schemas import AppointmentCreate, AppointmentResponse
 from dependencies import get_current_user
 from utils.notifications import create_notification
 
 router = APIRouter()
 FIXED_CONSULTATION_FEE = 10000.0
-ALLOWED_PAYMENT_METHODS = {"mastercard", "visa", "verve", "bank_transfer", "ussd", "wallet"}
-BANK_REQUIRED_FIELDS = {"bank_name", "account_name", "account_number"}
-CARD_REQUIRED_FIELDS = {"card_holder", "card_number", "expiry", "cvv"}
-USSD_REQUIRED_FIELDS = {"bank_name", "phone_number"}
+CONSULTATION_FORMATS = {"google_meet", "phone", "in_person"}
 
 
 @router.get("", response_model=List[AppointmentResponse])
@@ -43,11 +38,15 @@ def create_appointment(
         raise HTTPException(status_code=400, detail="Doctor profile not found")
     if not doctor_profile.is_verified:
         raise HTTPException(status_code=400, detail="Doctor is not verified yet")
+    consultation_format = str(appointment_data.consultation_format or "google_meet").strip().lower()
+    if consultation_format not in CONSULTATION_FORMATS:
+        raise HTTPException(status_code=400, detail="Choose Google Meet, phone, or in-person consultation")
 
     new_appointment = Appointment(
         user_id=current_user.id,
         doctor_id=doctor.id,
         doctor_name=doctor.name,
+        consultation_format=consultation_format,
         department=appointment_data.department,
         appointment_date=appointment_data.appointment_date,
         appointment_time=appointment_data.appointment_time,
@@ -56,15 +55,6 @@ def create_appointment(
     )
     db.add(new_appointment)
     db.flush()
-
-    create_notification(
-        db=db,
-        user_id=current_user.id,
-        notification_type=NotificationType.APPOINTMENT,
-        title="Appointment Booked",
-        message=f"Your appointment with Dr. {doctor.name} has been booked and is awaiting confirmation.",
-        link=f"/appointments/{new_appointment.id}",
-    )
 
     create_notification(
         db=db,
@@ -78,90 +68,6 @@ def create_appointment(
     db.commit()
     db.refresh(new_appointment)
 
-    return new_appointment
-
-
-@router.post("/with-payment", response_model=AppointmentResponse)
-def create_appointment_with_payment(
-    payload: dict,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    payment_method = str(payload.get("payment_method") or "").strip().lower()
-    if payment_method not in ALLOWED_PAYMENT_METHODS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid payment_method. Use one of: {', '.join(sorted(ALLOWED_PAYMENT_METHODS))}",
-        )
-
-    try:
-        appointment_data = AppointmentCreate(
-            department=payload.get("department"),
-            doctor_id=int(payload.get("doctor_id")),
-            appointment_date=payload.get("appointment_date"),
-            appointment_time=payload.get("appointment_time"),
-            notes=payload.get("notes"),
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid appointment data: {exc}") from exc
-
-    doctor = db.query(User).filter(User.id == appointment_data.doctor_id).first()
-    if not doctor or not str(doctor.role).lower().endswith("doctor"):
-        raise HTTPException(status_code=404, detail="Doctor not found")
-
-    doctor_profile = db.query(Doctor).filter(Doctor.user_id == doctor.id).first()
-    if not doctor_profile:
-        raise HTTPException(status_code=400, detail="Doctor profile not found")
-    if not doctor_profile.is_verified:
-        raise HTTPException(status_code=400, detail="Doctor is not verified yet")
-
-    transaction_id = f"txn_{uuid4().hex[:16]}"
-    payment = PaymentTransaction(
-        user_id=current_user.id,
-        amount=FIXED_CONSULTATION_FEE,
-        payment_method=payment_method,
-        status="completed",
-        transaction_id=transaction_id,
-        notes=str(details),
-    )
-    db.add(payment)
-    db.flush()
-
-    new_appointment = Appointment(
-        user_id=current_user.id,
-        doctor_id=doctor.id,
-        doctor_name=doctor.name,
-        department=appointment_data.department,
-        appointment_date=appointment_data.appointment_date,
-        appointment_time=appointment_data.appointment_time,
-        consultation_fee=FIXED_CONSULTATION_FEE,
-        payment_status="completed",
-        notes=appointment_data.notes,
-    )
-    db.add(new_appointment)
-    db.flush()
-
-    payment.appointment_id = new_appointment.id
-
-    create_notification(
-        db=db,
-        user_id=current_user.id,
-        notification_type=NotificationType.PAYMENT,
-        title="Payment Successful",
-        message=f"Payment confirmed. Your appointment with Dr. {doctor.name} is booked.",
-        link=f"/appointments/{new_appointment.id}",
-    )
-    create_notification(
-        db=db,
-        user_id=doctor.id,
-        notification_type=NotificationType.APPOINTMENT,
-        title="New Paid Appointment",
-        message=f"{current_user.name} booked a paid appointment on {appointment_data.appointment_date} at {appointment_data.appointment_time}.",
-        link="/doctor-dashboard",
-    )
-
-    db.commit()
-    db.refresh(new_appointment)
     return new_appointment
 
 
@@ -188,10 +94,69 @@ def get_doctor_appointments(
             "appointment_date": appointment.appointment_date,
             "appointment_time": appointment.appointment_time,
             "status": str(appointment.status).split(".")[-1].lower(),
+            "payment_status": str(appointment.payment_status).split(".")[-1].lower(),
+            "video_link": appointment.video_link,
+            "consultation_format": appointment.consultation_format,
             "notes": appointment.notes,
         }
         for appointment in appointments
     ]
+
+
+@router.patch("/doctor/{appointment_id}/availability")
+def respond_to_appointment_availability(
+    appointment_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not str(current_user.role).lower().endswith("doctor"):
+        raise HTTPException(status_code=403, detail="Only doctors can respond to appointment requests")
+    if "available" not in payload or not isinstance(payload["available"], bool):
+        raise HTTPException(status_code=400, detail="available must be true or false")
+
+    appointment = db.query(Appointment).filter(
+        Appointment.id == appointment_id,
+        Appointment.doctor_id == current_user.id,
+    ).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment request not found")
+    if appointment.status != AppointmentStatus.PENDING:
+        raise HTTPException(status_code=400, detail="This appointment request has already been reviewed")
+
+    if payload["available"]:
+        consultation_format = str(
+            payload.get("consultation_format") or appointment.consultation_format or "google_meet"
+        ).strip().lower()
+        if consultation_format not in CONSULTATION_FORMATS:
+            raise HTTPException(status_code=400, detail="Choose Google Meet, phone, or in-person consultation")
+        appointment.consultation_format = consultation_format
+        appointment.status = AppointmentStatus.DOCTOR_CONFIRMED
+        admins = db.query(User).filter(User.role == UserRole.ADMIN).all()
+        for admin in admins:
+            create_notification(
+                db=db,
+                user_id=admin.id,
+                notification_type=NotificationType.APPOINTMENT,
+                title="Appointment Awaiting Approval",
+                message=f"Dr. {current_user.name} confirmed availability for {appointment.user.name}'s {consultation_format.replace('_', ' ')} appointment on {appointment.appointment_date}.",
+                link="/admin/appointments",
+            )
+        result = "doctor_confirmed"
+    else:
+        appointment.status = AppointmentStatus.REJECTED
+        create_notification(
+            db=db,
+            user_id=appointment.user_id,
+            notification_type=NotificationType.APPOINTMENT,
+            title="Doctor Unavailable",
+            message=f"Dr. {current_user.name} is unavailable for your requested appointment. Please choose another time or doctor.",
+            link="/appointments",
+        )
+        result = "rejected"
+
+    db.commit()
+    return {"message": "Appointment response saved", "status": result}
 
 
 @router.get("/{appointment_id}", response_model=AppointmentResponse)
@@ -258,6 +223,10 @@ def mark_appointment_as_seen(
         raise HTTPException(status_code=404, detail="Appointment not found")
     if str(appointment.status).split(".")[-1].lower() == "cancelled":
         raise HTTPException(status_code=400, detail="Cannot mark cancelled appointment as seen")
+    if str(appointment.status).split(".")[-1].lower() != "approved":
+        raise HTTPException(status_code=400, detail="Appointment must be approved before it can be completed")
+    if str(appointment.payment_status).split(".")[-1].lower() != "completed":
+        raise HTTPException(status_code=400, detail="Appointment must be paid before it can be completed")
 
     appointment.status = "completed"
 
@@ -282,18 +251,3 @@ def mark_appointment_as_seen(
     db.commit()
     db.refresh(appointment)
     return appointment
-    details = payload.get("payment_details") or {}
-    if not isinstance(details, dict):
-        raise HTTPException(status_code=400, detail="payment_details must be an object")
-
-    def ensure_fields(required: set[str]):
-        missing = [k for k in required if not str(details.get(k) or "").strip()]
-        if missing:
-            raise HTTPException(status_code=400, detail=f"Missing payment details: {', '.join(missing)}")
-
-    if payment_method == "bank_transfer":
-        ensure_fields(BANK_REQUIRED_FIELDS)
-    elif payment_method in {"mastercard", "visa", "verve"}:
-        ensure_fields(CARD_REQUIRED_FIELDS)
-    elif payment_method == "ussd":
-        ensure_fields(USSD_REQUIRED_FIELDS)

@@ -164,7 +164,7 @@
 #     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 #     appointment_id = Column(Integer, ForeignKey("appointments.id", ondelete="SET NULL"), nullable=True, unique=True)
 #     amount = Column(Float, nullable=False)
-#     currency = Column(String(10), default="USD")
+#     currency = Column(String(10), default="NGN")
 #     payment_method = Column(String(50), nullable=False)
 #     status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
 #     transaction_id = Column(String(255), unique=True, nullable=True)
@@ -313,6 +313,7 @@ class UserRole(str, enum.Enum):
 
 class AppointmentStatus(str, enum.Enum):
     PENDING = "pending"
+    DOCTOR_CONFIRMED = "doctor_confirmed"
     APPROVED = "approved"
     REJECTED = "rejected"
     COMPLETED = "completed"
@@ -383,6 +384,14 @@ class Doctor(Base):
     user = relationship("User", back_populates="doctor_profile")
 
 # ─── APPOINTMENT MODEL ──────────────────────────────────────────
+class GoogleMeetCredential(Base):
+    __tablename__ = "google_meet_credentials"
+
+    doctor_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    encrypted_refresh_token = Column(Text, nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
 class Appointment(Base):
     __tablename__ = "appointments"
 
@@ -391,6 +400,7 @@ class Appointment(Base):
     doctor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     department = Column(String(100), nullable=False)
     doctor_name = Column(String(255), nullable=False)
+    consultation_format = Column(String(32), nullable=False, default="google_meet")
     appointment_date = Column(Date, nullable=False)
     appointment_time = Column(Time, nullable=False)
     status = Column(Enum(AppointmentStatus), default=AppointmentStatus.PENDING)
@@ -496,7 +506,7 @@ class PaymentTransaction(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     appointment_id = Column(Integer, ForeignKey("appointments.id", ondelete="SET NULL"), nullable=True, unique=True)
     amount = Column(Float, nullable=False)
-    currency = Column(String(10), default="USD")
+    currency = Column(String(10), default="NGN")
     payment_method = Column(String(50), nullable=False)
     status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
     transaction_id = Column(String(255), unique=True, nullable=True)

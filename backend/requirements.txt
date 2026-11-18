@@ -21,3 +21,6 @@ python-multipart==0.0.6
 httpx==0.25.0
 argon2-cffi
 apscheduler==3.10.4
+google-auth>=2.34,<3
+google-auth-oauthlib>=1.2,<2
+requests>=2.31,<3

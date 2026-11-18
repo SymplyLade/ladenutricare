@@ -282,9 +282,9 @@ def create_custom_nutrition_plan(
     }
 
 
-@router.post("/generate-from-title")
-@router.post("/generate_from_title")
-@router.post("/generate")
+@router.post("/generate-from-title", operation_id="nutrition_generate_from_title")
+@router.post("/generate_from_title", operation_id="nutrition_generate_from_title_legacy")
+@router.post("/generate", operation_id="nutrition_generate_plan")
 def generate_nutrition_plan_from_title(
     payload: AutoNutritionPlanCreate,
     db: Session = Depends(get_db),

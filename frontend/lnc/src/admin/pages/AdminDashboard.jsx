@@ -34,7 +34,7 @@
 //     { name: 'Total Doctors', value: stats?.totalDoctors || 0, icon: UserGroupIcon, color: 'bg-green-500' },
 //     { name: 'Appointments Today', value: stats?.appointmentsToday || 0, icon: CalendarIcon, color: 'bg-purple-500' },
 //     { name: 'Pending Appointments', value: stats?.pendingAppointments || 0, icon: CalendarIcon, color: 'bg-yellow-500' },
-//     { name: 'Total Payments', value: `$${stats?.totalRevenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-indigo-500' },
+//     { name: 'Total Payments', value: `₦${stats?.totalRevenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-indigo-500' },
 //     { name: 'Pending Verifications', value: stats?.pendingVerifications || 0, icon: CheckCircleIcon, color: 'bg-red-500' },
 //   ];
 
@@ -111,7 +111,7 @@ const AdminDashboard = () => {
     { name: 'Total Doctors', value: stats?.totalDoctors || 0, icon: UserGroupIcon, color: 'bg-green-500' },
     { name: 'Appointments Today', value: stats?.appointmentsToday || 0, icon: CalendarIcon, color: 'bg-purple-500' },
     { name: 'Pending Appointments', value: stats?.pendingAppointments || 0, icon: CalendarIcon, color: 'bg-yellow-500' },
-    { name: 'Total Revenue', value: `$${stats?.totalRevenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-indigo-500' },
+    { name: 'Total Revenue', value: `₦${stats?.totalRevenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-indigo-500' },
     { name: 'Pending Verifications', value: stats?.pendingVerifications || 0, icon: CheckCircleIcon, color: 'bg-red-500' },
     { name: 'Review Queue', value: stats?.reviewQueueCount || 0, icon: ExclamationTriangleIcon, color: 'bg-rose-500' },
     { name: 'Clinical Logs', value: stats?.decisionLogCount || 0, icon: ClipboardDocumentListIcon, color: 'bg-cyan-600' },

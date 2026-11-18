@@ -154,7 +154,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { cancelAppointment, deleteAppointment, getAppointment, markAppointmentSeen } from '../services/appointments';
 import { CalendarIcon, ClockIcon, UserIcon, CreditCardIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
-import { generateVideoLink } from '../services/videoConsultation';
 import { completePayment, initializePayment } from '../services/payments';
 import { completeDoctorTask, documentConsultation, getConsultationDocuments } from '../services/consultations';
 
@@ -165,7 +164,6 @@ const AppointmentDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
-  const [videoLoading, setVideoLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -229,19 +227,6 @@ const AppointmentDetail = () => {
     }
   };
 
-  const handleGenerateVideoLink = async () => {
-    setVideoLoading(true);
-    setError('');
-    try {
-      const response = await generateVideoLink(id);
-      setAppointment((prev) => ({ ...prev, video_link: response.data.video_link }));
-    } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.error || 'Failed to generate video consultation link');
-    } finally {
-      setVideoLoading(false);
-    }
-  };
-
   const handlePayNow = async () => {
     if (!paymentMethod) {
       setError('Please select a payment method (e.g., Mastercard) before paying.');
@@ -301,8 +286,10 @@ const AppointmentDetail = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'doctor_confirmed': return 'bg-blue-100 text-blue-800';
       case 'approved': return 'bg-green-100 text-green-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'rejected':
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -311,6 +298,10 @@ const AppointmentDetail = () => {
   const statusLabel = (status) => {
     const normalized = String(status || '').toLowerCase();
     if (normalized === 'completed') return 'Doctor Seen ✓';
+    if (normalized === 'pending') return 'Waiting for doctor availability';
+    if (normalized === 'doctor_confirmed') return 'Doctor confirmed — awaiting admin approval';
+    if (normalized === 'approved') return 'Approved — payment required';
+    if (normalized === 'rejected') return 'Not approved';
     return normalized || 'pending';
   };
 
@@ -445,10 +436,17 @@ const AppointmentDetail = () => {
             </div>
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
-                <VideoCameraIcon className="h-5 w-5 mr-2" /> Video Consultation
+                <VideoCameraIcon className="h-5 w-5 mr-2" />
+                {appointment.consultation_format === 'phone' ? 'Phone Consultation' : appointment.consultation_format === 'in_person' ? 'In-Person Consultation' : 'Google Meet'}
               </dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {appointment.video_link ? (
+                {appointment.consultation_format !== 'google_meet' ? (
+                  <span className="capitalize">
+                    {appointment.consultation_format === 'phone'
+                      ? 'The doctor will contact you by phone at the scheduled time.'
+                      : 'Please meet the doctor at the agreed location at the scheduled time.'}
+                  </span>
+                ) : appointment.video_link ? (
                   <a
                     href={appointment.video_link}
                     target="_blank"
@@ -459,17 +457,7 @@ const AppointmentDetail = () => {
                   </a>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-gray-600">No video link generated yet.</p>
-                    {appointment.status !== 'cancelled' && (
-                      <button
-                        type="button"
-                        onClick={handleGenerateVideoLink}
-                        disabled={videoLoading}
-                        className="bg-indigo-600 text-white px-3 py-2 rounded-md text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
-                      >
-                        {videoLoading ? 'Generating...' : 'Generate Video Link'}
-                      </button>
-                    )}
+                    <p className="text-gray-600">Your doctor will create and share the Google Meet link after your appointment is approved and paid.</p>
                   </div>
                 )}
               </dd>
@@ -595,7 +583,14 @@ const AppointmentDetail = () => {
           {paymentMessage}
         </div>
       )}
+      {appointment.status !== 'approved' && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+        <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          {appointment.status === 'pending' && 'Your request has been sent to the doctor. Payment will be available after the doctor confirms and the admin approves.'}
+          {appointment.status === 'doctor_confirmed' && 'The doctor confirmed availability. Your appointment is waiting for admin approval.'}
+        </div>
+      )}
       {String(appointment.payment_status || '').split('.').pop().toLowerCase() !== 'completed' &&
+        appointment.status === 'approved' &&
         appointment.status !== 'cancelled' && (
           <div className="mt-6 flex flex-col sm:flex-row sm:items-end sm:justify-end gap-3">
             <div className="w-full sm:w-64">

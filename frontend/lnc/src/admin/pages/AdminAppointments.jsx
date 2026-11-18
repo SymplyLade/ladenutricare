@@ -132,9 +132,9 @@ const AdminAppointments = () => {
   const handleStatusChange = async (id, newStatus) => {
     try {
       await updateAppointmentStatus(id, newStatus);
-      setAppointments(appointments.map(apt => (apt.id === id ? { ...apt, status: newStatus } : apt)));
+      setAppointments(current => current.map(apt => (apt.id === id ? { ...apt, status: newStatus } : apt)));
     } catch (err) {
-      setError('Failed to update appointment status');
+      setError(err.response?.data?.detail || 'Failed to update appointment status');
     }
   };
 
@@ -162,23 +162,38 @@ const AdminAppointments = () => {
               <tr key={apt.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{apt.id}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{apt.patient_name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Dr. {apt.doctor_name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  Dr. {apt.doctor_name}
+                  <div className="text-xs text-gray-400">{String(apt.consultation_format || 'google_meet').replaceAll('_', ' ')}</div>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{apt.appointment_date}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{apt.appointment_time}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <StatusBadge status={apt.status}>{apt.status}</StatusBadge>
+                  <StatusBadge status={apt.status}>{apt.status.replaceAll('_', ' ')}</StatusBadge>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <select
-                    value={apt.status}
-                    onChange={(e) => handleStatusChange(apt.id, e.target.value)}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approve</option>
-                    <option value="completed">Complete</option>
-                    <option value="cancelled">Cancel</option>
-                  </select>
+                  {apt.status === 'doctor_confirmed' ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(apt.id, 'approved')}
+                        className="rounded bg-green-600 px-3 py-1 text-white hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(apt.id, 'rejected')}
+                        className="rounded border border-red-300 px-3 py-1 text-red-700 hover:bg-red-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : apt.status === 'pending' ? (
+                    <span className="text-gray-500">Waiting for doctor</span>
+                  ) : apt.status === 'approved' && apt.payment_status !== 'completed' ? (
+                    <span className="text-gray-500">Waiting for patient payment</span>
+                  ) : null}
                 </td>
               </tr>
             ))}

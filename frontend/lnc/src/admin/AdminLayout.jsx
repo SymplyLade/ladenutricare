@@ -201,6 +201,7 @@ import { useAuth } from '../context/AuthContext';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
+import NotificationBell from '../components/NotificationBell';
 
 const AdminLayout = () => {
   const { user } = useAuth();
@@ -245,6 +246,11 @@ const AdminLayout = () => {
 
       {/* Header for mobile */}
       <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
+
+      {/* Notification access for desktop, where the mobile header is hidden. */}
+      <div className="hidden lg:ml-64 lg:flex lg:justify-end lg:px-8 lg:pt-4">
+        <NotificationBell />
+      </div>
 
       {/* Main content */}
       <div className="lg:pl-64">

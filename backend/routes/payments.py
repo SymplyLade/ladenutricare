@@ -44,6 +44,8 @@ def initialize_payment(
         raise HTTPException(status_code=404, detail="Appointment not found")
     if str(appointment.status).split(".")[-1].lower() == "cancelled":
         raise HTTPException(status_code=400, detail="Cannot pay for a cancelled appointment")
+    if str(appointment.status).split(".")[-1].lower() != "approved":
+        raise HTTPException(status_code=400, detail="Payment is available only after admin approval")
     if str(appointment.payment_status).split(".")[-1].lower() == "completed":
         raise HTTPException(status_code=400, detail="Appointment already paid")
 

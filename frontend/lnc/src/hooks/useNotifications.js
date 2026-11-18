@@ -29,10 +29,8 @@ export const useNotifications = (pollInterval = 30000) => {
   const markNotificationAsRead = useCallback(async (id) => {
     try {
       await markAsRead(id);
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
+      await fetchUnreadCount();
     } catch (error) {
       console.error('Failed to mark as read', error);
     }

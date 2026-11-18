@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
-from models import ActivityLog, Appointment, DoctorTask, Medication, Notification, User
+from models import ActivityLog, Appointment, DoctorTask, Medication, Notification, NotificationType, User
 from services.email_service import send_appointment_reminder_email
 from services.sms_service import send_appointment_reminder_sms
 
@@ -43,7 +43,7 @@ def send_reminders_for_tomorrow(db: Session):
         # Create in‑app notification for patient
         notification = Notification(
             user_id=patient.id,
-            type="appointment",
+            type=NotificationType.APPOINTMENT,
             title="Appointment Reminder",
             message=f"Reminder: You have an appointment with Dr. {doctor.name} tomorrow at {apt.appointment_time}.",
             link=f"/appointments/{apt.id}"
@@ -95,7 +95,7 @@ def send_doctor_task_reminders(db: Session, now: datetime | None = None):
 
         notification = Notification(
             user_id=task.user_id,
-            type="health_tip",
+            type=NotificationType.HEALTH_TIP,
             title="Doctor Task Reminder",
             message=f"Time for: {task.task_text}",
             link=f"/appointments/{task.appointment_id}",
@@ -124,7 +124,7 @@ def send_medication_time_reminders(db: Session, now: datetime | None = None):
 
         notification = Notification(
             user_id=med.user_id,
-            type="medication",
+            type=NotificationType.MEDICATION,
             title="Medication Reminder",
             message=f"Take {med.name} ({med.dosage}) now.",
             link="/medications",

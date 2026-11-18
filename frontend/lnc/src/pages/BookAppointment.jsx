@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { createAppointmentWithPayment } from '../services/appointments';
+import { createAppointment } from '../services/appointments';
 import { getVerifiedDoctors } from '../services/doctors';
 
 const DEFAULT_SPECIALIZATION = 'General Medicine';
@@ -28,7 +28,7 @@ const BookAppointment = () => {
     doctor_id: '',
     appointment_date: '',
     appointment_time: '',
-    payment_method: '',
+    consultation_format: 'google_meet',
     notes: '',
   });
   const [loading, setLoading] = useState(false);
@@ -117,7 +117,7 @@ const BookAppointment = () => {
     setLoading(true);
     setError('');
     try {
-      await createAppointmentWithPayment(formData);
+      await createAppointment(formData);
       navigate('/appointments');
     } catch (err) {
       setError(err.response?.data?.detail || err.response?.data?.error || 'Failed to book appointment');
@@ -235,25 +235,22 @@ const BookAppointment = () => {
         </div>
 
         <div>
-          <label htmlFor="payment_method" className="block text-sm font-medium text-gray-700">
-            Payment Method *
+          <label htmlFor="consultation_format" className="block text-sm font-medium text-gray-700">
+            Preferred consultation format *
           </label>
           <select
-            name="payment_method"
-            id="payment_method"
+            name="consultation_format"
+            id="consultation_format"
             required
-            value={formData.payment_method}
+            value={formData.consultation_format}
             onChange={handleChange}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           >
-            <option value="">Select method</option>
-            <option value="mastercard">Mastercard</option>
-            <option value="visa">Visa</option>
-            <option value="verve">Verve</option>
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="ussd">USSD</option>
-            <option value="wallet">Wallet</option>
+            <option value="google_meet">Video call (Google Meet)</option>
+            <option value="phone">Phone call</option>
+            <option value="in_person">In person</option>
           </select>
+          <p className="mt-1 text-xs text-gray-500">The doctor will confirm your preferred format or select another option.</p>
         </div>
 
         <div>
@@ -283,7 +280,7 @@ const BookAppointment = () => {
             disabled={disableSubmit}
             className="w-full sm:w-auto bg-indigo-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing Payment...' : 'Pay and Book Appointment'}
+            {loading ? 'Sending Request...' : 'Request Appointment'}
           </button>
         </div>
       </form>

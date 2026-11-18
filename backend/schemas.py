@@ -64,6 +64,7 @@ class AppointmentBase(BaseModel):
     department: str
     appointment_date: date
     appointment_time: time
+    consultation_format: str = "google_meet"
     notes: Optional[str] = None
 
 

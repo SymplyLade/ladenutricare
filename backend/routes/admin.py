@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import get_current_user
 from utils.notifications import create_notification
-from models import ActivityLog, Appointment, Doctor, NotificationType, NutritionPlan, PaymentTransaction, User
+from models import ActivityLog, Appointment, AppointmentStatus, Doctor, NotificationType, NutritionPlan, PaymentTransaction, User
 
 router = APIRouter()
 
@@ -30,7 +30,9 @@ def get_dashboard_stats(
         db.query(Appointment).filter(Appointment.appointment_date == date.today()).count()
     )
     pending_appointments = (
-        db.query(Appointment).filter(Appointment.status == "pending").count()
+        db.query(Appointment).filter(
+            Appointment.status.in_([AppointmentStatus.PENDING, AppointmentStatus.DOCTOR_CONFIRMED])
+        ).count()
     )
     total_revenue = (
         db.query(PaymentTransaction)
@@ -226,7 +228,9 @@ def get_all_appointments(
                 "doctor_name": apt.doctor_name,
                 "appointment_date": apt.appointment_date,
                 "appointment_time": apt.appointment_time,
-                "status": str(apt.status),
+                "status": str(apt.status).split(".")[-1].lower(),
+                "payment_status": str(apt.payment_status).split(".")[-1].lower(),
+                "consultation_format": apt.consultation_format,
             }
         )
     return response
@@ -244,29 +248,28 @@ def update_appointment_status(
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
-    if "status" in payload:
-        appointment.status = payload["status"]
+    requested_status = str(payload.get("status") or "").strip().lower()
+    if requested_status not in {"approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="Admin may approve or reject doctor-confirmed appointments")
+    if appointment.status != AppointmentStatus.DOCTOR_CONFIRMED:
+        raise HTTPException(status_code=400, detail="Only doctor-confirmed appointments can be reviewed")
 
-    normalized_status = str(appointment.status).split(".")[-1].lower()
+    appointment.status = AppointmentStatus.APPROVED if requested_status == "approved" else AppointmentStatus.REJECTED
+    if requested_status == "approved":
+        message = f"Your {appointment.consultation_format.replace('_', ' ')} appointment with Dr. {appointment.doctor_name} was approved. Please complete payment to confirm it."
+        title = "Appointment Approved — Payment Required"
+    else:
+        message = f"Your appointment with Dr. {appointment.doctor_name} was not approved. Please choose another time or doctor."
+        title = "Appointment Not Approved"
 
     create_notification(
         db=db,
         user_id=appointment.user_id,
         notification_type=NotificationType.APPOINTMENT,
-        title="Appointment Status Updated",
-        message=f"Your appointment with Dr. {appointment.doctor_name} is now {normalized_status}.",
+        title=title,
+        message=message,
         link=f"/appointments/{appointment.id}",
     )
-
-    if appointment.doctor_id:
-        create_notification(
-            db=db,
-            user_id=appointment.doctor_id,
-            notification_type=NotificationType.APPOINTMENT,
-            title="Appointment Status Updated",
-            message=f"Appointment with {appointment.user.name if appointment.user else 'patient'} is now {normalized_status}.",
-            link="/doctor-dashboard",
-        )
 
     db.commit()
     return {"message": "Appointment updated"}

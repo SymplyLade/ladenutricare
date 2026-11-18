@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import logging
@@ -55,6 +55,17 @@ def _resolve_database_url() -> str:
                 return explicit_url.replace("mysql://", "mysql+pymysql://", 1)
             return explicit_url
 
+    # Keep a fresh local checkout usable without requiring a developer to
+    # install and configure MySQL. Production deployments should provide a
+    # database URL or the DB_* / MYSQL* variables below.
+    has_database_config = any(
+        _env_value(key) is not None
+        for key in ("DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME",
+                    "MYSQLUSER", "MYSQLPASSWORD", "MYSQLHOST", "MYSQLPORT", "MYSQLDATABASE")
+    )
+    if not has_database_config and not os.getenv("RENDER"):
+        return "sqlite:///./ladenutricare.db"
+
     db_user = _env_value("DB_USER", "MYSQLUSER") or "root"
     db_password = _env_value("DB_PASSWORD", "MYSQLPASSWORD") or "password"
     db_host = _env_value("DB_HOST", "MYSQLHOST") or "localhost"
@@ -73,11 +84,12 @@ DATABASE_URL = _resolve_database_url()
 
 engine_kwargs = {
     "echo": os.getenv("SQL_ECHO", "False").lower() == "true",
-    "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
-    "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "20")),
     "pool_pre_ping": True,
     "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "3600")),
 }
+if not DATABASE_URL.startswith("sqlite:"):
+    engine_kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "10"))
+    engine_kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "20"))
 
 ssl_ca = os.getenv("DB_SSL_CA")
 if ssl_ca:
@@ -105,3 +117,20 @@ def test_connection() -> bool:
     except Exception as e:
         print(f"Database connection failed: {e}")
         return False
+
+
+def ensure_appointment_workflow_schema() -> None:
+    """Add columns and enum values required by the appointment workflow."""
+    appointment_columns = {column["name"] for column in inspect(engine).get_columns("appointments")}
+    with engine.begin() as conn:
+        if "consultation_format" not in appointment_columns:
+            conn.execute(text(
+                "ALTER TABLE appointments ADD COLUMN consultation_format "
+                "VARCHAR(32) NOT NULL DEFAULT 'google_meet'"
+            ))
+        if engine.dialect.name == "mysql":
+            conn.execute(text(
+                "ALTER TABLE appointments MODIFY COLUMN status "
+                "ENUM('PENDING','DOCTOR_CONFIRMED','APPROVED','REJECTED','COMPLETED','CANCELLED') "
+                "DEFAULT 'PENDING'"
+            ))
