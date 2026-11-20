@@ -299,7 +299,7 @@
 
 
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, Enum, ForeignKey, JSON, Date, Time
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, Enum, ForeignKey, JSON, Date, Time, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -367,6 +367,14 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     expiry_checks = relationship("ExpiryCheck", back_populates="user", cascade="all, delete-orphan")
     doctor_profile = relationship("Doctor", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+
+class ProfilePicture(Base):
+    __tablename__ = "profile_pictures"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    image_data = Column(LargeBinary, nullable=False)
+    content_type = Column(String(32), nullable=False)
 
 # ─── DOCTOR MODEL (extends User) ───────────────────────────────
 class Doctor(Base):

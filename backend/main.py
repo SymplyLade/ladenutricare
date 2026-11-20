@@ -233,13 +233,13 @@ app = FastAPI(
 
 default_origins = (
     "http://localhost:5173,http://localhost:3000,"
-    "https://ladenutricare-jae5.vercel.app"
+    "https://ladenutricare.vercel.app,https://ladenutricare-jae5.vercel.app"
 )
 origins_str = os.getenv("CORS_ORIGINS", default_origins)
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
-vercel_production_origin = "https://ladenutricare-jae5.vercel.app"
-if vercel_production_origin not in origins:
-    origins.append(vercel_production_origin)
+for vercel_origin in ("https://ladenutricare.vercel.app", "https://ladenutricare-jae5.vercel.app"):
+    if vercel_origin not in origins:
+        origins.append(vercel_origin)
 
 app.add_middleware(
     CORSMiddleware,

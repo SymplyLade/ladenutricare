@@ -52,19 +52,16 @@
 
 
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User
+from models import ProfilePicture, User
 from schemas import UserResponse, UserUpdate
 from dependencies import get_current_user
 
 router = APIRouter()
 
-PROFILE_PICTURE_DIR = Path(__file__).resolve().parents[1] / "uploads" / "profile-pictures"
 MAX_PROFILE_PICTURE_SIZE = 2 * 1024 * 1024
 ALLOWED_PICTURE_TYPES = {
     "image/jpeg": ("jpg", "image/jpeg"),
@@ -104,7 +101,7 @@ async def upload_profile_picture(
     if not content:
         raise HTTPException(status_code=400, detail="The selected image is empty")
 
-    extension, media_type = file_type
+    _, media_type = file_type
     # Check the file signature as well as the browser supplied content type.
     signatures = {
         "image/jpeg": content.startswith(b"\xff\xd8\xff"),
@@ -114,18 +111,18 @@ async def upload_profile_picture(
     if not signatures[media_type]:
         raise HTTPException(status_code=400, detail="The selected file is not a valid image")
 
-    PROFILE_PICTURE_DIR.mkdir(parents=True, exist_ok=True)
-    destination = PROFILE_PICTURE_DIR / f"{current_user.id}.{extension}"
     try:
-        destination.write_bytes(content)
+        picture = db.query(ProfilePicture).filter(ProfilePicture.user_id == current_user.id).first()
+        if picture is None:
+            picture = ProfilePicture(user_id=current_user.id)
+            db.add(picture)
+        picture.image_data = content
+        picture.content_type = media_type
         current_user.profile_picture = f"/api/users/profile/picture/{current_user.id}"
         db.commit()
         db.refresh(current_user)
-        for old_extension in {"jpg", "png", "gif"} - {extension}:
-            (PROFILE_PICTURE_DIR / f"{current_user.id}.{old_extension}").unlink(missing_ok=True)
     except Exception:
         db.rollback()
-        destination.unlink(missing_ok=True)
         raise
     return current_user
 
@@ -135,8 +132,11 @@ def get_profile_picture(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.profile_picture:
         raise HTTPException(status_code=404, detail="Profile picture not found")
-    for extension, media_type in (("jpg", "image/jpeg"), ("png", "image/png"), ("gif", "image/gif")):
-        image_path = PROFILE_PICTURE_DIR / f"{user_id}.{extension}"
-        if image_path.is_file():
-            return FileResponse(image_path, media_type=media_type, headers={"Cache-Control": "no-cache"})
-    raise HTTPException(status_code=404, detail="Profile picture not found")
+    picture = db.query(ProfilePicture).filter(ProfilePicture.user_id == user_id).first()
+    if picture is None:
+        raise HTTPException(status_code=404, detail="Profile picture not found")
+    return Response(
+        content=picture.image_data,
+        media_type=picture.content_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
