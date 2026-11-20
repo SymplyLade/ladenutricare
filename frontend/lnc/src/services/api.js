@@ -1,18 +1,21 @@
 import axios from 'axios';
 
-const DEFAULT_PROD_API_BASE_URL = '/api';
+const DEFAULT_PROD_API_BASE_URL = 'https://ladenutricare.onrender.com/api';
 
 const resolveApiBaseUrl = () => {
   const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
-  if (envUrl) return envUrl.replace(/\/+$/, '');
-
   if (typeof window !== 'undefined') {
     const { hostname } = window.location;
     const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (envUrl && (!envUrl.startsWith('/') || isLocalHost)) {
+      return envUrl.replace(/\/+$/, '');
+    }
     return isLocalHost ? 'http://localhost:8000/api' : DEFAULT_PROD_API_BASE_URL;
   }
 
-  return DEFAULT_PROD_API_BASE_URL;
+  return envUrl && !envUrl.startsWith('/')
+    ? envUrl.replace(/\/+$/, '')
+    : DEFAULT_PROD_API_BASE_URL;
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
