@@ -113,7 +113,11 @@ const Profile = () => {
           <div className="relative">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200">
               {previewUrl ? (
-                <img src={previewUrl} alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={previewUrl.startsWith('/') ? new URL(previewUrl, api.defaults.baseURL).toString() : previewUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <UserIcon className="h-12 w-12 text-gray-400" />

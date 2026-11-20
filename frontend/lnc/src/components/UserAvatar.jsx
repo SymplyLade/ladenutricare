@@ -1,3 +1,5 @@
+import api from '../services/api';
+
 const UserAvatar = ({
   name,
   imageUrl,
@@ -13,7 +15,7 @@ const UserAvatar = ({
     return (
       <img
         className={`${sizeClass} rounded-full object-cover ${className}`}
-        src={imageUrl}
+        src={imageUrl.startsWith('/') ? new URL(imageUrl, api.defaults.baseURL).toString() : imageUrl}
         alt={`${name || 'User'} avatar`}
         onError={onImageError}
       />
